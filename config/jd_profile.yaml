@@ -1,0 +1,243 @@
+# JD profile for: Senior AI Engineer — Founding Team, Redrob AI
+# Encodes the rubric derived from job_description.docx into checkable rules.
+# This file is the single source of truth for "what the JD means" — rank.py
+# reads this rather than hardcoding scoring logic inline.
+
+role:
+  title_query_text: >
+    Senior AI Engineer owning ranking, retrieval, and matching systems.
+    Production experience with embeddings-based retrieval, vector databases
+    or hybrid search infrastructure, strong Python, and evaluation frameworks
+    for ranking systems (NDCG, MRR, MAP, A/B testing). Has shipped an
+    end-to-end ranking, search, or recommendation system to real users.
+
+  experience_band:
+    ideal_min_years: 6
+    ideal_max_years: 8
+    acceptable_min_years: 5
+    acceptable_max_years: 9
+    # score tapers linearly outside ideal band, more steeply outside acceptable band
+    taper_outside_acceptable_per_year: 0.15
+
+# ---------------------------------------------------------------------------
+# Must-have skill clusters. Each cluster is a list of synonym/related terms.
+# A candidate "hits" a cluster if any of their skills/headline/summary/career
+# text matches (via embedding or keyword) any term in the cluster.
+# ---------------------------------------------------------------------------
+skill_clusters:
+  embeddings_retrieval:
+    weight: 0.30
+    terms:
+      - sentence-transformers
+      - sentence transformers
+      - openai embeddings
+      - BGE
+      - E5 embeddings
+      - embeddings
+      - semantic search
+      - dense retrieval
+      - vector search
+
+  vector_db_hybrid_search:
+    weight: 0.25
+    terms:
+      - pinecone
+      - weaviate
+      - qdrant
+      - milvus
+      - opensearch
+      - elasticsearch
+      - faiss
+      - hybrid search
+      - bm25
+
+  ranking_ir:
+    weight: 0.25
+    terms:
+      - information retrieval
+      - learning to rank
+      - learning-to-rank
+      - ranking models
+      - recommendation systems
+      - recommender systems
+      - search relevance
+      - xgboost ranking
+
+  eval_frameworks:
+    weight: 0.15
+    terms:
+      - ndcg
+      - mrr
+      - map metric
+      - a/b testing
+      - ab testing
+      - offline evaluation
+      - online evaluation
+      - offline-to-online correlation
+
+  strong_python:
+    weight: 0.05
+    terms:
+      - python
+
+# Nice-to-haves: small positive bumps, never disqualifying if absent
+nice_to_have:
+  llm_finetuning: ["lora", "qlora", "peft", "fine-tuning llms", "fine-tuning"]
+  ltr_models: ["xgboost", "lightgbm", "neural ranking"]
+  hrtech_exposure: ["recruiting", "hr tech", "talent", "marketplace"]
+  distributed_systems: ["distributed systems", "large-scale inference", "kubernetes", "kafka"]
+  open_source: ["open source", "github", "publication", "paper", "talk"]
+  bump_weight: 0.03   # small additive bump per hit, capped
+
+# ---------------------------------------------------------------------------
+# Disqualifiers — each triggered rule multiplies the composite score by its
+# penalty factor. Multiple triggers compound multiplicatively. Not a hard
+# exclude — a rare strong-fit candidate can still survive with other signals.
+# ---------------------------------------------------------------------------
+disqualifiers:
+  pure_research_only:
+    description: "All career history in academic/research labs, no production deployment mentions"
+    penalty_factor: 0.35
+    detect:
+      keywords_required_absent: ["production", "deployed", "shipped", "users", "scale", "live system"]
+      keywords_present_any: ["research lab", "academic", "phd research", "postdoc", "university lab"]
+
+  langchain_wrapper_only:
+    description: "AI experience entirely <12mo, framed only as LangChain/OpenAI API wrapper work, no pre-LLM ML/IR history"
+    penalty_factor: 0.35
+    detect:
+      recent_ai_months_max: 12
+      wrapper_keywords: ["langchain", "openai api", "gpt wrapper", "prompt chaining"]
+      requires_absent: ["pre-llm production ml experience"]
+
+  architect_no_code:
+    description: "Title suggests architect/tech-lead/manager with no hands-on coding role in last 18 months"
+    penalty_factor: 0.40
+    detect:
+      title_keywords: ["architect", "tech lead", "engineering manager", "head of", "director"]
+      months_since_ic_role_max: 18
+
+  consulting_only:
+    description: "Entire career at TCS/Infosys/Wipro/Accenture/Cognizant/Capgemini with no product-company stint"
+    penalty_factor: 0.35
+    detect:
+      consulting_companies: ["tcs", "infosys", "wipro", "accenture", "cognizant", "capgemini", "tata consultancy", "hcl"]
+      requires_all_employers_in_list: true
+
+  cv_speech_robotics_only:
+    description: "Primary background is computer vision/speech/robotics with no NLP/IR exposure"
+    penalty_factor: 0.40
+    detect:
+      domain_keywords: ["computer vision", "speech recognition", "robotics", "image classification", "object detection"]
+      nlp_ir_keywords_required_absent: ["nlp", "information retrieval", "search", "ranking", "text", "language model"]
+
+  closed_source_no_validation:
+    description: "5+ years entirely closed-source with zero external validation (no GitHub, no papers/talks/certs)"
+    penalty_factor: 0.6   # softer — harder to detect reliably, smaller penalty
+    detect:
+      min_years: 5
+      github_activity_score_max: 0
+      external_validation_keywords_required_absent: ["paper", "talk", "open source", "publication", "conference"]
+
+# ---------------------------------------------------------------------------
+# Role-narrative consistency check (catches keyword-stuffing / shuffled or
+# templated career-history text, e.g. identical description text reused
+# across different job titles, or description unrelated to its own title).
+# ---------------------------------------------------------------------------
+narrative_consistency:
+  weight_in_composite: 0.15
+  # strong signal: identical description text reused across roles whose
+  # titles belong to unrelated domains (e.g. same text under "Frontend
+  # Engineer" and "DevOps Engineer") — corroborated, high-confidence flag
+  duplicate_unrelated_roles_penalty_factor: 0.45
+  # weak signal: a single job's title and description fall in different
+  # keyword buckets — noisy on its own (adjacent disciplines overlap
+  # naturally, e.g. "Backend Engineer" doing data-pipeline work), so this
+  # only applies a small penalty, not a strong one
+  title_description_bucket_mismatch_penalty_factor: 0.90
+
+# ---------------------------------------------------------------------------
+# Honeypot / impossible-profile consistency checks
+# ---------------------------------------------------------------------------
+honeypot_checks:
+  weight_in_composite: 0.10
+  checks:
+    - name: expert_skill_no_duration
+      description: "expert/advanced proficiency with implausibly low duration_months"
+      max_months_for_expert: 6
+      max_months_for_advanced: 3
+    - name: experience_duration_mismatch
+      description: "sum of career_history durations far exceeds stated years_of_experience"
+      max_allowed_excess_ratio: 1.5
+    - name: date_inconsistency
+      description: "start_date after end_date, or is_current=true with end_date set"
+    - name: endorsement_implausibility
+      description: "endorsements_received wildly disproportionate to connection_count"
+      max_ratio_endorsements_to_connections: 5.0
+    - name: jack_of_all_trades_assessments
+      description: "skill_assessment_scores of 90+ across 15+ unrelated domains"
+      min_domains: 15
+      min_score: 90
+  # composite implausibility score = count of triggered checks
+  # score multiplier = max(0.0, 1 - 0.35 * num_checks_triggered)
+
+# ---------------------------------------------------------------------------
+# Location / relocation fit
+# ---------------------------------------------------------------------------
+location:
+  weight: 0.10
+  preferred_cities: ["pune", "noida"]
+  preferred_score: 1.0
+  acceptable_cities: ["hyderabad", "mumbai", "delhi", "delhi ncr", "gurugram", "gurgaon", "bengaluru", "bangalore"]
+  acceptable_score: 0.7
+  relocate_bonus_if_not_preferred: 0.5   # willing_to_relocate=true adds this much toward acceptable_score
+  other_india_score: 0.4
+  international_score: 0.15
+  international_with_relocate_score: 0.35
+
+# ---------------------------------------------------------------------------
+# Behavioral signal multiplier (not additive — multiplies the composite)
+# ---------------------------------------------------------------------------
+behavioral_multiplier:
+  min_multiplier: 0.35    # widened from 0.65 — a clearly unreachable candidate
+                           # (not open to work, long inactive, unresponsive)
+                           # should be meaningfully suppressed, not just nudged
+  max_multiplier: 1.10
+  components:
+    open_to_work_flag: { weight: 0.45 }   # increased from 0.25 — the single
+                                            # clearest "can we actually reach
+                                            # this person right now" signal
+    last_active_recency: { weight: 0.20, full_score_within_days: 14, zero_score_after_days: 180 }
+    recruiter_response_rate: { weight: 0.15 }
+    interview_completion_rate: { weight: 0.12 }
+    profile_completeness_score: { weight: 0.08 }
+
+# ---------------------------------------------------------------------------
+# Top-level composite weights.
+#
+# Architecture: relevance_core = weighted(semantic_jd_fit, skill_cluster_match)
+# is computed FIRST and determines whether a candidate is even in consideration.
+# experience_band_fit and location_fit are then applied as MULTIPLICATIVE
+# GATES on relevance_core (each maps to a multiplier in roughly [gate_floor, 1.0])
+# rather than separate additive terms — this prevents a candidate with zero
+# relevant skills (e.g. a Graphic Designer or Mechanical Engineer) from
+# scoring well purely by having the "right" years of experience or location.
+# narrative_consistency and honeypot_consistency weights are informational
+# only — both are applied as further multiplicative penalty factors (see
+# their sections above), consistent with disqualifiers and the behavioral
+# multiplier.
+# ---------------------------------------------------------------------------
+composite_weights:
+  semantic_jd_fit: 0.55       # share within relevance_core
+  skill_cluster_match: 0.45   # share within relevance_core
+  experience_band_fit: 0.15   # gate strength (see gate_floor below)
+  location_fit: 0.10          # gate strength (see gate_floor below)
+  narrative_consistency: 0.10 # informational; applied multiplicatively
+  honeypot_consistency: 0.10  # informational; applied multiplicatively
+
+gates:
+  # gate_multiplier = (1 - gate_weight) + gate_weight * component_score
+  # e.g. experience_band_fit weight 0.15 means a candidate with exp_score=0
+  # gets multiplied by 0.85, not crushed to zero — gates adjust, they don't replace.
+  experience_gate_weight: 0.15
+  location_gate_weight: 0.10
