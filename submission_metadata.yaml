@@ -1,0 +1,70 @@
+﻿# Redrob Hackathon — Submission Metadata
+
+team_name: "Srivathsan S"
+
+primary_contact:
+  name: "Srivathsan S"
+  email: "srivathsan1510@gmail.com"
+  phone: "+91-8925313481"
+
+team_members:
+  - name: "Srivathsan S"
+    email: "srivathsan1510@gmail.com"
+    role: "ML Engineer"
+
+github_repo: "https://github.com/srivathsan1510/redrob-india-runs-ranker"
+
+sandbox_link: "https://colab.research.google.com/drive/1a-eOz4qWV7CTBDx0TW_ffWWyv_fi-YTG?usp=sharing"
+
+reproduce_command: "python rank.py --candidates ./data/candidates.jsonl --out ./outputs/submission.csv --top-n 100"
+
+compute:
+  platform: "Windows 11 laptop"
+  cpu_cores: 6
+  ram_gb: 8
+  python_version: "3.13.5"
+  os: "Windows 11"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: true
+  pre_computation_time_minutes: 60
+
+ai_tools_used:
+  - "Claude"
+
+ai_usage_summary: |
+  Used Claude (Anthropic) extensively for architecture design, code
+  implementation, debugging, and iterative refinement of the scoring rubric.
+  Designed the JD-fit rubric collaboratively by manually inspecting sample
+  candidate profiles, identified scoring bugs through a structured
+  50-candidate development cycle and an 8-case adversarial stress test
+  probing edge cases (true honeypots, keyword-stuffed profiles, behavioral-
+  signal edge cases), then validated the final 100K-scale output by spot-
+  checking specific candidate records against the actual reasoning text
+  generated for them. No candidate data was sent to any LLM during the
+  actual ranking pipeline execution (compliant with no-network constraint).
+
+methodology_summary: |
+  Two-phase pipeline: offline precompute (feature extraction, honeypot/
+  consistency checks, sentence-transformer embeddings, no time limit) then
+  a fast timed ranking step (pure numpy/pandas arithmetic, well under 5 min
+  for 100K rows). Scoring uses a relevance-first gated formula: a relevance
+  core (55% semantic JD-fit via embedding cosine similarity, 45% rule-based
+  skill-cluster matching) is gated, not added to, by experience-band and
+  location fit, so a candidate with zero relevant skills can't compensate
+  via age or location alone. Skill-cluster matches found only in the skills
+  list count for far less than matches grounded in career-history text or
+  title, which directly defeats the keyword-stuffer trap. Multiplicative
+  penalties apply for six rule-based disqualifiers, narrative-consistency
+  violations, and five honeypot-consistency checks. A behavioral multiplier
+  further scales the score. Reasoning text is template-based and fact-
+  grounded, with tone calibrated to both rank position and penalty severity.
+  Iteratively debugged via stress-testing against eight synthetic
+  adversarial profiles and spot-checked against real candidate records.
+
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
